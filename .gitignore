@@ -11,3 +11,9 @@ wheels/
 .DS_Store
 *.pyc
 /__pycache__
+GEMINI.md
+pyproject.toml
+uv.lock
+.python-version
+src/analysis
+data/spotify-2023.csv
