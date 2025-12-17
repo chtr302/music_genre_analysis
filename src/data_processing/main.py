@@ -7,7 +7,8 @@ def process_missing_value(data : pd.DataFrame) -> pd.DataFrame:
     """Hàm này xử lý các cột giá trị missing"""
     data['streams'] = pd.to_numeric(data['streams'], errors='coerce')
     stream_median_value = data['streams'].median()
-    data['streams'].fillna(value=stream_median_value)
+    data['streams'] = data['streams'].fillna(value=stream_median_value)
+    data['log_streams'] = np.log1p(data['streams'])
 
     columns_to_process = ['in_deezer_playlists', 'in_shazam_charts']
 
