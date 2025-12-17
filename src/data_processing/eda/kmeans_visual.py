@@ -1,75 +1,63 @@
-import pandas as pd, os
+import pandas as pd
+import os
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
-from sklearn.metrics import silhouette_score
 
 sns.set(style="whitegrid")
 
-BASE_DIR = os.path.dirname(__file__)
-DATA_PATH = os.path.abspath(os.path.join(BASE_DIR, "../../../data/spotify_data_processed.csv"))
+#path
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_PATH = os.path.join(BASE_DIR,"../../../data/spotify_clustered.csv")
+
+#load data
 df = pd.read_csv(DATA_PATH)
 
-features = [
-    "streams","total_playlists","chart_appearances_count",
-    "artist_avg_streams","danceability_%","energy_%","acousticness_%"
-]
+#features
+features = ["streams","in_spotify_playlists","in_spotify_charts",
+            "danceability_%","energy_%","acousticness_%"]
+features = [f for f in features if f in df.columns]
 
-X = df[features].dropna()
-X_scaled = StandardScaler().fit_transform(X)
+#standardize
+X_scaled = StandardScaler().fit_transform(df[features])
 
-# Elbow Method 
-ks, inertias = range(2,6), []
-for k in ks:
-    inertias.append(KMeans(n_clusters=k, random_state=42, n_init=10).fit(X_scaled).inertia_)
-
-plt.plot(ks, inertias, marker="o")
-plt.xlabel("So luong cluster (k)")
-plt.ylabel("Inertia (do tap trung)")
-plt.title("Elbow Method")
-plt.show()
-
-# Silhouette 
-sils = []
-for k in ks:
-    labels = KMeans(n_clusters=k, random_state=42, n_init=10).fit_predict(X_scaled)
-    sils.append(silhouette_score(X_scaled, labels))
-
-plt.plot(ks, sils, marker="o")
-plt.xlabel("So luong cluster (k)")
-plt.ylabel("Silhouette score")
-plt.title("Silhouette Score")
-plt.show()
-
-# PCA 2D 
-kmeans = KMeans(n_clusters=3, random_state=42, n_init=10)
-labels = kmeans.fit_predict(X_scaled)
-
-pca = PCA(n_components=2)
+#pca
+pca = PCA(n_components=2, random_state=42)
 X_pca = pca.fit_transform(X_scaled)
+df["PCA1"] = X_pca[:,0]
+df["PCA2"] = X_pca[:,1]
 
-df.loc[X.index, "PCA_Streams_Playlist"] = X_pca[:,0]
-df.loc[X.index, "PCA_Audio_Features"] = X_pca[:,1]
-df.loc[X.index, "cluster"] = labels
-
-cluster_names = {
-    0: "Hit & Pho bien", 1: "Pho bien vua", 2: "Niche / Acoustic"
-}
-df["cluster_name"] = df["cluster"].map(cluster_names)
-
+#scatter 
+plt.figure(figsize=(9,6))
 sns.scatterplot(
     data=df,
-    x="PCA_Streams_Playlist",
-    y="PCA_Audio_Features",
+    x="PCA1", y="PCA2",
     hue="cluster_name",
     palette="Set2",
     alpha=0.7
 )
+plt.title("Spotify Song Clusters PCA")
+plt.xlabel("PCA1 – Do pho bien (Popularity)")
+plt.ylabel("PCA2 – Dac trung audio (Audio features)")
+plt.legend(title="Cluster")
+plt.tight_layout()
+plt.show()
 
-plt.title("KMeans Clustering (PCA 2D)")
-plt.xlabel("Tong hop Streams + Playlist")
-plt.ylabel("Tong hop Audio Features")
-plt.legend(title="Loai cum")
+#boxplot 
+plt.figure(figsize=(8,5))
+sns.boxplot(x="cluster_name", y="streams", data=df, palette="Set2")
+plt.title("Phan bo Streams theo Cluster")
+plt.xlabel("Cluster")
+plt.ylabel("Streams")
+plt.tight_layout()
+plt.show()
+
+#histogram 
+plt.figure(figsize=(8,5))
+sns.histplot(data=df, x="streams", hue="cluster_name", palette="Set2", bins=50)
+plt.title("Histogram Streams theo Cluster")
+plt.xlabel("Streams")
+plt.ylabel("So luong bai hat")
+plt.tight_layout()
 plt.show()
