@@ -17,3 +17,4 @@ uv.lock
 .python-version
 src/analysis
 data/spotify-2023.csv
+outputs
