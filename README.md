@@ -19,19 +19,18 @@ Bộ dữ liệu bao gồm các bài hát được nghe nhiều nhất trên Spo
 
 ## Cấu trúc Dự án
 
-├── data/                                                                         
-│   ├── spotify-2023.csv           # Dữ liệu gốc                                  
-│   ├── spotify_data_processed.csv # Dữ liệu đã làm sạch                          
-│   └── data_info.md               # Từ điển dữ liệu                              
-├── docs/                          # Tài liệu báo cáo và hướng dẫn                
-├── models/                        # Chứa các file model đã huấn luyện (.pkl)     
-├── outputs/                       # Biểu đồ và báo cáo kết quả                   
-└── src/                                                                          
-    ├── analysis/                  # Scripts vẽ biểu đồ phân tích                 
-    ├── data_processing/           # Module tiền xử lý, clustering, recommendation
-    ├── train_model.py             # Script huấn luyện mô hình                    
-    └── predict.py                 # Script chạy dự đoán 
-
+*   **data/**: Chứa dữ liệu gốc và dữ liệu đã qua xử lý.
+*   **docs/**: Tài liệu báo cáo chi tiết và hướng dẫn kỹ thuật.
+*   **models/**: Lưu trữ các file mô hình đã huấn luyện (.pkl).
+*   **outputs/**: Chứa các biểu đồ phân tích và bảng kết quả đánh giá.
+*   **src/**: Mã nguồn chính của dự án.
+    *   `analysis/`: Chứa các scripts vẽ biểu đồ phân tích (ví dụ: `preprocessing_analysis.py`).
+    *   `data_processing/`:
+        *   `eda/`: Chứa các scripts phân tích khám phá dữ liệu nâng cao (Clustering K-Means, visualizations).
+        *   `recommendation/`: Chứa scripts cho hệ thống gợi ý dựa trên nội dung (Content-based).
+        *   `main.py`: Script chính thực hiện quy trình tiền xử lý dữ liệu.
+    *   `train_model.py`: Script huấn luyện và đánh giá mô hình dự báo.
+    *   `predict.py`: Script chạy dự đoán lượt stream và khả năng thành hit.
 ## Hướng dẫn Cài đặt
 
 Yêu cầu môi trường: Python 3.8 trở lên.
@@ -72,5 +71,3 @@ python3 src/data_processing/recommendation/content_based.py
 2.  Trần Công Hậu - Thành viên
 3.  Nguyễn Minh Quân - Thành viên
 
----
-Dự án môn học Khoa học Dữ liệu - Học viện Công nghệ Bưu chính Viễn thông.
