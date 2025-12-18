@@ -665,8 +665,14 @@ def main() -> None:
     # 1) Chuẩn bị dữ liệu
     df = load_and_prepare_data(data_path)
 
-    X = df.drop(columns=["streams", "hit"])
-    y_reg = df["streams"]
+    # Không đưa streams/log_streams vào X để tránh leak target
+    drop_cols = ["streams", "hit"]
+    if "log_streams" in df.columns:
+        drop_cols.append("log_streams")
+
+    X = df.drop(columns=drop_cols)
+    # Regression target: dùng trực tiếp cột log_streams (log(streams))
+    y_reg = df["log_streams"]
     y_clf = df["hit"]
 
     preprocessor, feature_cols = build_preprocessor(X)
