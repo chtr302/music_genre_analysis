@@ -7,57 +7,48 @@ from sklearn.decomposition import PCA
 
 sns.set(style="whitegrid")
 
-#path
+#  path 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_PATH = os.path.join(BASE_DIR,"../../../data/spotify_clustered.csv")
+DATA_PATH = os.path.join(BASE_DIR, "../../../data/spotify_clustered.csv")
 
-#load data
+#  load data
 df = pd.read_csv(DATA_PATH)
 
-#features
-features = ["streams","in_spotify_playlists","in_spotify_charts",
-            "danceability_%","energy_%","acousticness_%"]
-features = [f for f in features if f in df.columns]
+# audio features 
+audio_features = [
+    "danceability_%",
+    "energy_%",
+    "acousticness_%",
+    "instrumentalness_%",
+    "valence_%"
+]
 
-#standardize
-X_scaled = StandardScaler().fit_transform(df[features])
+#  standardize 
+X_scaled = StandardScaler().fit_transform(df[audio_features])
 
-#pca
+# pca 
 pca = PCA(n_components=2, random_state=42)
 X_pca = pca.fit_transform(X_scaled)
-df["PCA1"] = X_pca[:,0]
-df["PCA2"] = X_pca[:,1]
 
-#scatter 
-plt.figure(figsize=(9,6))
+df["PCA1"] = X_pca[:, 0]
+df["PCA2"] = X_pca[:, 1]
+
+# plot 
+plt.figure(figsize=(9, 6))
+
 sns.scatterplot(
     data=df,
-    x="PCA1", y="PCA2",
+    x="PCA1",
+    y="PCA2",
     hue="cluster_name",
     palette="Set2",
+    s=20,
     alpha=0.7
 )
-plt.title("Spotify Song Clusters PCA")
-plt.xlabel("PCA1 – Do pho bien (Popularity)")
-plt.ylabel("PCA2 – Dac trung audio (Audio features)")
+
+plt.title("KMeans Clustering of Spotify Songs (Audio Features)", fontsize=13)
+plt.xlabel("PCA 1 – Energy & Rhythm")
+plt.ylabel("PCA 2 – Mood & Acoustic")
 plt.legend(title="Cluster")
-plt.tight_layout()
-plt.show()
-
-#boxplot 
-plt.figure(figsize=(8,5))
-sns.boxplot(x="cluster_name", y="streams", data=df, palette="Set2")
-plt.title("Phan bo Streams theo Cluster")
-plt.xlabel("Cluster")
-plt.ylabel("Streams")
-plt.tight_layout()
-plt.show()
-
-#histogram 
-plt.figure(figsize=(8,5))
-sns.histplot(data=df, x="streams", hue="cluster_name", palette="Set2", bins=50)
-plt.title("Histogram Streams theo Cluster")
-plt.xlabel("Streams")
-plt.ylabel("So luong bai hat")
 plt.tight_layout()
 plt.show()

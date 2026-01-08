@@ -1,68 +1,145 @@
 import pandas as pd
-import numpy as np
 import os
+import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 
+# path
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_PATH = os.path.join(BASE_DIR,"../../../data/spotify-2023.csv")
-OUT_PATH = os.path.join(BASE_DIR,"../../../data/spotify_clustered.csv")
+DATA_PATH = os.path.join(BASE_DIR, "../../../data/spotify-2023.csv")
+OUT_PATH = os.path.join(BASE_DIR, "../../../data/spotify_clustered.csv")
+ELBOW_PLOT = os.path.join(BASE_DIR, "../../../data/elbow_plot.png")
+SILHOUETTE_PLOT = os.path.join(BASE_DIR, "../../../data/silhouette_plot.png")
 
+# read csv 
 def read_csv_safe(path):
-    for enc in ["utf-8","latin1","utf-16"]:
+    for enc in ["utf-8", "latin1", "utf-16"]:
         try:
-            return pd.read_csv(path,encoding=enc)
+            return pd.read_csv(path, encoding=enc)
         except UnicodeDecodeError:
             pass
-    raise ValueError("khong doc duoc csv")
+    raise ValueError("Cannot read CSV")
 
 df = read_csv_safe(DATA_PATH)
 
-#clean streams
-df["streams"] = df["streams"].astype(str).str.replace(",","",regex=False)
-df["streams"] = pd.to_numeric(df["streams"],errors="coerce")
+# clean numeric 
+num_cols = [
+    "streams",
+    "in_spotify_playlists",
+    "in_spotify_charts",
+    "danceability_%",
+    "energy_%", 
+    "acousticness_%", 
+    "instrumentalness_%", 
+    "valence_%"
+]
+
+for col in num_cols:
+    if col in df.columns:
+        df[col] = (
+            df[col]
+            .astype(str)
+            .str.replace(",", "", regex=False)
+            .str.extract(r"(\d+\.?\d*)")[0]
+            .astype(float)
+        )
+
 df = df.dropna(subset=["streams"])
 
-#features
-features = ["streams","in_spotify_playlists","in_spotify_charts",
-            "danceability_%","energy_%","acousticness_%"]
-features = [f for f in features if f in df.columns]
-X = df[features].dropna()
+# audio features
+audio_features = [
+    "danceability_%", "energy_%", "acousticness_%", "instrumentalness_%", "valence_%"
+]
 
-#standardize
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X)
+X = df[audio_features].dropna()
 
-#elbow+silhouette
-print("Elbow+Silhouette:")
-for k in range(2,6):
-    km = KMeans(n_clusters=k,random_state=42,n_init=10)
+# standardize 
+X_scaled = StandardScaler().fit_transform(X)
+
+# Elbow & Silhouette để chọn k 
+ks = range(2, 6)
+inertia_list = []
+silhouette_list = []
+
+print("\n===== ELBOW & SILHOUETTE SCORES =====")
+print("k\tInertia\t\tSilhouette")
+
+for k in ks:
+    km = KMeans(n_clusters=k, random_state=42, n_init=10)
     labels = km.fit_predict(X_scaled)
-    print(f"k={k} | inertia={km.inertia_:.0f} | silhouette={silhouette_score(X_scaled,labels):.3f}")
+    inertia = km.inertia_
+    silhouette = silhouette_score(X_scaled, labels)
+    inertia_list.append(inertia)
+    silhouette_list.append(silhouette)
+    print(f"{k}\t{inertia:.2f}\t\t{silhouette:.4f}")
 
-#train final model
-kmeans = KMeans(n_clusters=3,random_state=42,n_init=10)
-df.loc[X.index,"cluster"] = kmeans.fit_predict(X_scaled)
+# Biểu đồ Elbow
+plt.figure(figsize=(6,4))
+plt.plot(ks, inertia_list, marker='o', color='blue')
+plt.xlabel('Number of clusters (k)')
+plt.ylabel('Inertia')
+plt.title('Elbow Method for KMeans')
+plt.xticks(ks)
+plt.grid(True)
+plt.tight_layout()
+plt.savefig(ELBOW_PLOT)
+plt.show()
+print(f"Elbow plot saved: {ELBOW_PLOT}")
 
-#is_hit
-df["is_hit"] = df["streams"]>=df["streams"].quantile(0.75)
+# Silhouette
+plt.figure(figsize=(6,4))
+plt.plot(ks, silhouette_list, marker='s', color='red')
+plt.xlabel('Number of clusters (k)')
+plt.ylabel('Silhouette Score')
+plt.title('Silhouette Score vs Number of Clusters')
+plt.xticks(ks)
+plt.grid(True)
+plt.tight_layout()
+plt.savefig(SILHOUETTE_PLOT)
+plt.show()
+print(f"Silhouette plot saved: {SILHOUETTE_PLOT}")
 
-#cluster_name
-hit_rate = df.groupby("cluster")["is_hit"].mean().sort_values()
-cluster_map = {
-    hit_rate.index[0]:"Niche/Acoustic",
-    hit_rate.index[1]:"Popular",
-    hit_rate.index[2]:"Hit&Mainstream"
-}
+# Chọn k = 3
+k_final = 3
+kmeans = KMeans(n_clusters=k_final, random_state=42, n_init=10)
+df.loc[X.index, "cluster"] = kmeans.fit_predict(X_scaled)
+
+# hit label 
+df["is_hit"] = df["streams"] >= df["streams"].quantile(0.75)
+
+# rename clusters 
+cluster_mean = df.groupby("cluster")[audio_features].mean()
+
+cluster_map = {}
+for c in cluster_mean.index:
+    row = cluster_mean.loc[c]
+    if row["acousticness_%"] > 50:
+        cluster_map[c] = "Soft / Acoustic"
+    elif row["energy_%"] > 60 and row["valence_%"] > 50:
+        cluster_map[c] = "Energetic / Feel-Good"
+    else:
+        cluster_map[c] = "Popular / Mainstream"
+
 df["cluster_name"] = df["cluster"].map(cluster_map)
 
-#summary
-print("\ntrungbinh dac trung theo cluster")
-print(df.groupby("cluster_name")[features].mean().round(2))
-print("\nty le hit theo cluster")
+print("\n===== Trung bình các đặc trưng theo cluster =====")
+print(df.groupby("cluster_name")[audio_features].mean().round(2))
+
+print("\n===== Tỉ lệ hit theo cluster =====")
 print(df.groupby("cluster_name")["is_hit"].mean().round(3))
 
-#save
-df[features+["cluster","cluster_name"]].dropna().to_csv(OUT_PATH,index=False)
-print(f"\nda luu file: {OUT_PATH}")
+print("\n===== Playlist & Chart trung bình theo cluster =====")
+print(
+    df.groupby("cluster_name")[["in_spotify_playlists", "in_spotify_charts"]]
+    .mean()
+    .round(2)
+)
+
+# save
+df[
+    audio_features
+    + ["streams", "in_spotify_playlists", "in_spotify_charts"]
+    + ["cluster", "cluster_name"]
+].dropna().to_csv(OUT_PATH, index=False)
+print(f"\nClustered data saved: {OUT_PATH}")
